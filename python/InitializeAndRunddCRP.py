@@ -65,22 +65,24 @@ def ClusterSpanningTrees(z, adj_list):
     # We're going to remove edges from adj_list, so make a copy
     adj_list = adj_list.copy()
 
-    nvox = len(adj_list)
+    nvox = len(adj_list.keys())
     # Remove all adjacencies that cross clusters
-    for i in range(nvox):
-        adj_list[i] = adj_list[i][z[adj_list[i]]==z[i]]
+    for i in np.arange(nvox):
+        adj_list[i] = np.asarray(adj_list[i])[z[adj_list[i]]==z[i]]
         adj_list[i]  = np.random.permutation(adj_list[i])
 
     # Construct sparse adjacency matrix
-    neighbor_count = [len(neighbors) for neighbors in adj_list]
+    neighbor_count = [len(neighbors) for neighbors in adj_list.values()]
     node_list = np.zeros(sum(neighbor_count))
     next_edge = 0
-    for i in range(nvox):
+    for i in np.arange(nvox):
         if neighbor_count[i] > 0:
             node_list[next_edge:(next_edge+neighbor_count[i])] = i
-            next_edge = next_edge + neighbor_count[i]
+            next_edge += neighbor_count[i]
+
+    node_list = map(int,node_list)
     G = sparse.csc_matrix((np.ones(len(node_list)),
-                            (node_list,np.hstack(adj_list))), shape=(nvox,nvox)) 
+                            (node_list,np.hstack(adj_list.values()))), shape=(nvox,nvox)) 
     
     # Construct spanning tree in each cluster
     minT = sparse.csgraph.minimum_spanning_tree(G)

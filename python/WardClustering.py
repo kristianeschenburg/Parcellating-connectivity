@@ -25,7 +25,7 @@ def ClusterTree(D, adj_list):
     Y = Qx + Qx.transpose()-2*np.dot(X, X.transpose())
     Y = spatial.distance.squareform(Y,checks=False)
     Y[Y<0] = 0  # Correct for numerical errors in very similar rows
-    
+
     # Construct adjacency matrix
     N = len(adj_list)
     A = np.zeros([N,N], dtype=bool)
@@ -41,7 +41,7 @@ def ClusterTree(D, adj_list):
     # During updating clusters, cluster index is constantly changing, R is
     # a index vector mapping the original index to the current (row, column)
     # index in Y.  C denotes how many points are contained in each cluster.
-    m = mt.ceil(mt.sqrt(2*Y.shape[0]))
+    m = int(np.ceil(np.sqrt(2*Y.shape[0])))
     C = np.zeros(2*m-1)
     C[0:m] = 1
     R = np.arange(m)

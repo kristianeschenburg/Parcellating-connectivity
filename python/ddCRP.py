@@ -29,6 +29,8 @@ def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_
             c[i] = neighbors[rd.randint(1,len(neighbors))]
     else:
         c = init_c
+
+    c = map(int,c)
     
     # Initialize spatial connection matrix
     G = sparse.coo_matrix((np.ones(num_el),(np.arange(num_el),c)),
@@ -64,7 +66,7 @@ def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_
                 if K_rem != K:
                     # We split a cluster, compute change in likelihood
                     rem_delta_lp = -LikelihoodDiff(D, parcels_rem, z_rem[i],
-                                                    z_rem[c[i]], hyp, sym)
+                        z_rem[c[i]], hyp, sym)
                 else:
                     rem_delta_lp = 0
 
@@ -251,15 +253,14 @@ def UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose):
         print('Step: ' + str(steps) + ' Time: ' + str(curr_time) + 
                 ' LP: ' + str(curr_lp) + ' K: ' + str(K))
 
-    if gt_z.size > 0:
+    if gt_z:
         stats['NMI'].append(StatsUtil.NMI(gt_z, map_z))
 
     return stats
 
 # Precompute and package hyperparameter expressions into vector form
 def ComputeCachedLikelihoodTerms(kappa, nu, sigsq):
-    cached = [0,kappa, nu, sigsq, nu * sigsq, -mt.lgamma(nu/2) +
-                (1/2)*mt.log(kappa) + (nu/2)*mt.log(nu*sigsq)]
+    cached = [0,kappa, nu, sigsq, nu * sigsq, -special.gammaln(nu/2) + (1/2)*np.log(kappa) + (nu/2)*np.log(nu*sigsq)]
     return cached
 
 
@@ -344,7 +345,7 @@ def ChooseFromLP(lp):
     p = np.exp(normLogp)
     p[np.isfinite(p)==False]=0
     cumP = np.cumsum(p)
-    i = np.where(cumP>random.random())[0][0]
+    i = np.where(cumP>random.random())[0]
     return i
 
 # Insert value in coo_matrix G at row,col (assumes every other row of G has
