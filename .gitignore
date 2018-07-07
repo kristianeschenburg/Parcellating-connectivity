@@ -1,0 +1,8 @@
+# Byte-compiled / optimized / DLL files
+*.pyc
+*.xml
+*.ipynb
+*.out
+*.nii.gz
+*.nii
+*.gii
