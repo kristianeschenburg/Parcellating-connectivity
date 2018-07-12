@@ -105,8 +105,8 @@ function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ...
     for r = regions'
         indices = [indices;find(label.cdata == labelmap(char(r)))];
     end
-    
     indices = sort(indices);
+    
     
     fprintf('Filtering adjacency list.\n');
     filtered_adjacency = filter_adjacency(adjacency_list,indices);
@@ -127,12 +127,13 @@ function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ...
     downsampled = data(indices,:);
     
     S = corr(downsampled');
-    S = S - diag(diag(S));
+    S = S - diag(diag(S));clear
+    
     S = normr(S);
     
     clear downsampled_data similarities adjacency_list
     
-    [z,Z] = WardClustering(S,filtered_adjacency,sizes);
+    [~,Z] = WardClustering(S,filtered_adjacency,sizes);
     [map_z, stats] = InitializeAndRunddCRP(Z, S, filtered_adjacency, ... 
         sizes, alpha, kappa, nu, sigsq, pass_limit, ... 
         [], true, 'edge_prior', edge_prior);
@@ -140,7 +141,10 @@ function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ...
     outfunc = sprintf('%s.label.mat',outputfile);
     outstat = sprintf('%s.stats.mat',outputfile);
     
-    save(outfunc,'map_z','-v7.3');
+    map_z_full = zeros(size(label.cdata,1));
+    map_z_full(indices) = map_z;
+    
+    save(outfunc,'map_z_full','-v7.3');
     save(outstat,'stats','-v7.3');
     
 exit
