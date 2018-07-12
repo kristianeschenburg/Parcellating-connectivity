@@ -12,12 +12,86 @@
 % sigsq: hyperparameter of cluster variance
 % pass_limit: number of MCMC passes
 
-function run_ddCRP(surfacefile,labelfile,regions,datafile,outputfile,sizes,alpha,kappa,nu,sigsq,pass_limit)
+function run_ddCRP(surfacefile,labelfile,datafile,outputfile,sizes,alpha,kappa,nu,sigsq,pass_limit)
+
+    try
+        sizes = [str2double(sizes)];
+    catch
+        sizes = [sizes];
+    end
+    
+    
+    try
+        alpha = str2double(alpha);
+    catch
+        
+    end
+    
+
+    try
+        kappa = str2double(kappa);
+    catch
+        
+    end
+    
+
+    try
+        nu = str2double(nu);
+    catch
+        
+    end
+    
+
+    try
+        sigsq = str2double(sigsq);
+    catch
+        
+    end
+    
+
+    try
+        pass_limit = str2double(pass_limit);
+    catch
+        
+    end
+
+
+	fprintf('\nFile settings: \n');
+    
+    disp(surfacefile)
+    
+    [fname,name,ext] = fileparts(surfacefile);
+    testfile = sprintf('%s%s',name,ext);
+	fprintf('Surface file: %s\n',testfile);
+    
+    [~,name,ext] = fileparts(labelfile);
+    testfile = sprintf('%s%s',name,ext);
+	fprintf('Label file: %s\n',testfile);
+    
+    [~,name,ext] = fileparts(datafile);
+    testfile = sprintf('%s%s',name,ext);
+	fprintf('Data file: %s\n',testfile);
+    
+    [~,name,ext] = fileparts(outputfile);
+    testfile = sprintf('%s%s',name,ext);
+	fprintf('Output File: %s\n',testfile);
+
+	fprintf('\n');
+   
+	fprintf('Parameter settings: \n');
+    fprintf('Sizes: %.3f\n',sizes);
+	fprintf('Alpha: %.3f\n',alpha);
+	fprintf('Kappa: %.3f\n',kappa);
+	fprintf('Nu: %.3f\n',nu);
+	fprintf('SigSQ: %.3f\n',sigsq);
+	fprintf('Pass_Limit: %.3f\n',pass_limit);
+
+    regions = {'L_inferiorparietal'; 'L_supramarginal'};
 
     addpath('/mnt/parcellator/parcellation/Matlab/SurfaceDistanceComputations/');
     addpath('/mnt/parcellator/parcellation/Matlab/ddCRP/');
     
-    fprintf('Loading surface file.\n');
+    fprintf('\nLoading surface file.\n');
     try
         surface = gifti(surfacefile);
     catch
@@ -37,7 +111,6 @@ function run_ddCRP(surfacefile,labelfile,regions,datafile,outputfile,sizes,alpha
     labelmap = containers.Map(label.labels.name,label.labels.key);
     indices = [];
     for r = regions'
-        fprintf('Region: %s\n',char(r));
         indices = [indices;find(label.cdata == labelmap(char(r)))];
     end
     
@@ -46,7 +119,7 @@ function run_ddCRP(surfacefile,labelfile,regions,datafile,outputfile,sizes,alpha
     fprintf('Filtering adjacency list.\n');
     filtered = filter_adjacency(adjacency_list,indices);
     
-    fprintf('Loading data matrix.\n');
+    fprintf('Loading data matrix.\n\n');
     try
         temp = load(datafile);
     catch
@@ -56,19 +129,19 @@ function run_ddCRP(surfacefile,labelfile,regions,datafile,outputfile,sizes,alpha
     data = temp.(fn{1});
     downsampled = data(indices,:);
     
-    similarities = corr(downsampled');
-    D = 1-similarities;
-    D = normr(D);
+    S = corr(downsampled');
+    S = S - diag(diag(S));
+    S = normr(S);
     
     clear downsampled_data similarities adjacency_list
     
-    [z,Z] = WardClustering(D,filtered,7);
-    [map_z, stats] = InitializeAndRunddCRP(Z,D,filtered, sizes, alpha, kappa, nu, sigsq, pass_limit,[],true);
+    [z,Z] = WardClustering(S,filtered,7);
+    [map_z, stats] = InitializeAndRunddCRP(Z,S,filtered, sizes, alpha, kappa, nu, sigsq, pass_limit,[],true);
     
-    outfunc = sprintf('%s.func.gii',outputfile);
-    outstat = sprintf('%s.mat',outputfile);
+    outfunc = sprintf('%s.label.mat',outputfile);
+    outstat = sprintf('%s.stats.mat',outputfile);
     
     save(outfunc,'map_z','-v7.3');
     save(outstat,'stats','-v7.3');
     
-end
+exit
