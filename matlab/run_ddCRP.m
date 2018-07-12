@@ -12,55 +12,50 @@
 % sigsq: hyperparameter of cluster variance
 % pass_limit: number of MCMC passes
 
-function run_ddCRP(surfacefile,labelfile,datafile,outputfile,sizes,alpha,kappa,nu,sigsq,pass_limit)
+function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ... 
+    sizes, alpha, kappa, nu, sigsq, pass_limit, ...
+    varargin)
 
-    try
-        sizes = [str2double(sizes)];
-    catch
-        sizes = [sizes];
+    addpath('./utilities/');
+
+    % We add an optional parameter to receive the edge_prior matrix.
+    p = inputParser;
+    errorMsg = 'Value must be numeric or boolean.'; 
+    validationFcn = @(x) assert(isnumeric(x) || islogical(x), errorMsg);
+    p.addParameter('edge_prior',false,validationFcn);
+
+    p.parse(varargin{:})
+    edge_prior = p.Results.edge_prior;
+
+    if isa(sizes,'string') || isa(sizes,'char')
+        sizes = str2double(sizes);
     end
     
-    
-    try
+    if isa(alpha,'string') || isa(alpha,'char')
         alpha = str2double(alpha);
-    catch
-        
     end
     
-
-    try
+    if isa(kappa,'string') || isa(kappa,'char')
         kappa = str2double(kappa);
-    catch
-        
     end
     
-
-    try
+    if isa(nu,'string') || isa(nu,'char')
         nu = str2double(nu);
-    catch
-        
     end
     
-
-    try
+    if isa(sigsq,'string') || isa(sigsq,'char')
         sigsq = str2double(sigsq);
-    catch
-        
     end
     
-
-    try
+    if isa(pass_limit,'string') || isa(pass_limit,'char')
         pass_limit = str2double(pass_limit);
-    catch
-        
     end
-
 
 	fprintf('\nFile settings: \n');
     
     disp(surfacefile)
     
-    [fname,name,ext] = fileparts(surfacefile);
+    [~,name,ext] = fileparts(surfacefile);
     testfile = sprintf('%s%s',name,ext);
 	fprintf('Surface file: %s\n',testfile);
     
@@ -88,9 +83,6 @@ function run_ddCRP(surfacefile,labelfile,datafile,outputfile,sizes,alpha,kappa,n
 
     regions = {'L_inferiorparietal'; 'L_supramarginal'};
 
-    addpath('/mnt/parcellator/parcellation/Matlab/SurfaceDistanceComputations/');
-    addpath('/mnt/parcellator/parcellation/Matlab/ddCRP/');
-    
     fprintf('\nLoading surface file.\n');
     try
         surface = gifti(surfacefile);
@@ -117,7 +109,10 @@ function run_ddCRP(surfacefile,labelfile,datafile,outputfile,sizes,alpha,kappa,n
     indices = sort(indices);
     
     fprintf('Filtering adjacency list.\n');
-    filtered = filter_adjacency(adjacency_list,indices);
+    filtered_adjacency = filter_adjacency(adjacency_list,indices);
+    
+    fprintf('Filtering edge prior matrix.\n');
+    edge_prior = filter_prior(adjacency_list,indices,edge_prior);
     
     fprintf('Loading data matrix.\n\n');
     try
@@ -125,8 +120,10 @@ function run_ddCRP(surfacefile,labelfile,datafile,outputfile,sizes,alpha,kappa,n
     catch
         Warning('Data file does not exist.');
     end
+    
     fn = fieldnames(temp);
     data = temp.(fn{1});
+    data = normr(data);
     downsampled = data(indices,:);
     
     S = corr(downsampled');
@@ -135,8 +132,10 @@ function run_ddCRP(surfacefile,labelfile,datafile,outputfile,sizes,alpha,kappa,n
     
     clear downsampled_data similarities adjacency_list
     
-    [z,Z] = WardClustering(S,filtered,7);
-    [map_z, stats] = InitializeAndRunddCRP(Z,S,filtered, sizes, alpha, kappa, nu, sigsq, pass_limit,[],true);
+    [z,Z] = WardClustering(S,filtered_adjacency,sizes);
+    [map_z, stats] = InitializeAndRunddCRP(Z, S, filtered_adjacency, ... 
+        sizes, alpha, kappa, nu, sigsq, pass_limit, ... 
+        [], true, 'edge_prior', edge_prior);
     
     outfunc = sprintf('%s.label.mat',outputfile);
     outstat = sprintf('%s.stats.mat',outputfile);

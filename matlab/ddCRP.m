@@ -19,8 +19,6 @@ p.addParameter('edge_prior',false,validationFcn);
 p.parse(varargin{:})
 edge_prior = p.Results.edge_prior;
 
-
-
 hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
 nvox = length(adj_list);
 
@@ -123,6 +121,14 @@ for pass = 1:num_passes
                     cached_merge(n_ind) = z_rem(n);
                 end
             end
+        end
+        
+        % if edge prior has been provided, apply prior probability weights
+        % to lp
+        if ismatrix(edge_prior)
+            fprintf('Index: %i\n',i);
+            adj_list_i = adj_list{i};
+            priors = edge_prior(i,adj_list_i);
         end
         
         % Pick new edge proportional to probability
