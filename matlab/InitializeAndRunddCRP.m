@@ -7,7 +7,21 @@
 %   determines whether update information is printed every 1000 iterations.
 %   Returns the MAP parcellation map_z, as well as a stats objects with
 %   information about the iterations of the model
+<<<<<<< HEAD
+function [map_z, stats] = InitializeAndRunddCRP(Z, D_norm, adj_list, sizes, alpha, kappa, ... 
+    nu, sigsq, pass_limit, gt_z, verbose, varargin)
+
+% We add an optional parameter to receive the edge_prior matrix.
+p = inputParser;
+errorMsg = 'Value must be numeric or boolean.'; 
+validationFcn = @(x) assert(isnumeric(x) || islogical(x),errorMsg);
+p.addParameter('edge_prior',false,validationFcn);
+
+p.parse(varargin{:})
+edge_prior = p.Results.edge_prior;
+=======
 function [map_z, stats] = InitializeAndRunddCRP(Z, D_norm, adj_list, sizes, alpha, kappa, nu, sigsq, pass_limit, gt_z, verbose)
+>>>>>>> 503340db92dcf942a0b27eae846dcd176ecdc1c5
 
 % Standard alpha = 10, kappa = 0.0001, nu = 1
 
@@ -20,5 +34,5 @@ z = cluster(Z, 'maxclust', sizes(max_i));
 c = ClusterSpanningTrees(z, adj_list);
 [map_z,stats] = ddCRP(D_norm, adj_list, c, gt_z, ...
                   pass_limit, alpha, kappa, nu, sigsq, ...
-                  1000, verbose);
+                  1000, verbose, 'edge_prior',edge_prior);
 end

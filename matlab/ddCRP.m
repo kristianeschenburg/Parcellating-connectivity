@@ -7,12 +7,26 @@
 %   if verbose is True. The MAP parcellation and diagnostic information is
 %   returned.
 function [map_z,stats] = ddCRP(D, adj_list, init_c, gt_z, num_passes, ...
-                          alpha, kappa, nu, sigsq, stats_interval, verbose)
+                          alpha, kappa, nu, sigsq, stats_interval, ... 
+                          verbose, varargin)
+                      
+% We add an optional parameter to receive the edge_prior matrix.
+p = inputParser;
+errorMsg = 'Value must be numeric or boolean.'; 
+validationFcn = @(x) assert(isnumeric(x) || islogical(x),errorMsg);
+p.addParameter('edge_prior',false,validationFcn);
+
+p.parse(varargin{:})
+edge_prior = p.Results.edge_prior;
+
+
 
 hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
 nvox = length(adj_list);
 
 % Generate random initialization if not specified
+% c is the linkage vector i.e. for connected components 
+% c(i) is parent vertex of vertex (i)
 if (isempty(init_c))
     c = zeros(nvox, 1);
     for i = 1:nvox
@@ -52,14 +66,19 @@ for pass = 1:num_passes
                                        map_z, verbose);
         end
         
-        % Compute change in log-prob when removing the edge c_i
+        %%% Compute change in log-prob when removing the edge c_i
         G(i,c(i)) = 0;
         if (c(i) == i)
             % Removing self-loop, parcellation won't change
             rem_delta_lp = -log(alpha);
             z_rem = z; parcels_rem = parcels;
         else
+
+        	% compute connected components, and component IDs for each vertex (z_rem), due to proposal
             [K_rem, z_rem, parcels_rem] = ConnectedComp(G);
+
+            % if number of connected components changes with proposal
+            % compute change in likelihood due to proposal
             if (K_rem ~= K)
                 % We split a cluster, compute change in likelihood
                 rem_delta_lp = -LikelihoodDiff(D, ...
@@ -69,16 +88,29 @@ for pass = 1:num_passes
             end
         end
         
-        % Compute change in log-prob for each possible edge c_i
+        %%% Compute change in log-prob for each possible edge c_i
+        % get neighbors of vertex i
         adj_list_i = adj_list{i};
+
+        % initialize log-probability vector of neighbors + 1 (for self)
         lp = zeros(length(adj_list_i)+1, 1);
+
+        % assign self choice as log(alpha)
         lp(end) = log(alpha);
         cached_merge = zeros(length(adj_list_i),1);
+
+        % loop over neighbors
         for n_ind = 1:length(adj_list_i)
+
+        	% get neighbor ID
             n = adj_list_i(n_ind);
+
+            % if component ID of neighbor is same as component ID of parent
             if (z_rem(n) == z_rem(c(i)))
                 % Just undoing edge removal
                 lp(n_ind) = -rem_delta_lp - (c(i)==i)*log(alpha);
+
+            % otherwise, if component ID of neighbor is different (i)
             elseif (z_rem(n) ~= z_rem(i)) 
                 % Proposing merge
                 % First check cache to see if this is already computed
