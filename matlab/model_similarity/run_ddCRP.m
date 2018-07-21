@@ -26,6 +26,8 @@ function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ...
 
     p.parse(varargin{:})
     edge_prior = p.Results.edge_prior;
+    fprintf('Edge prior: \n');
+    disp(edge_prior);
 
     if isa(sizes,'string') || isa(sizes,'char')
         sizes = str2double(sizes);
@@ -111,8 +113,10 @@ function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ...
     fprintf('Filtering adjacency list.\n');
     filtered_adjacency = filter_adjacency(adjacency_list,indices);
     
-    fprintf('Filtering edge prior matrix.\n');
-    edge_prior = filter_prior(adjacency_list,indices,edge_prior);
+    if edge_prior
+        fprintf('Filtering edge prior matrix.\n');
+        edge_prior = filter_prior(adjacency_list,indices,edge_prior);
+    end
     
     fprintf('Loading data matrix.\n\n');
     try
@@ -127,7 +131,7 @@ function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ...
     downsampled = data(indices,:);
     
     S = corr(downsampled');
-    S = S - diag(diag(S));clear
+    S = S - diag(diag(S));
     
     S = normr(S);
     

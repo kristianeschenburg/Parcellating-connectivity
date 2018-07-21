@@ -5,8 +5,16 @@ hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
 
 logp = zeros(length(sizes),1);
 for i = 1:length(sizes)
+
+	% z is a vector assigning each index a value from 1 : size(i)
     z = cluster(Z, 'maxclust', sizes(i))';
+
+    % sort cluster ID vector, keep indices
+    % sorted_z is a vector from 1 : size(i)
+    % sorted_o is a vector of the original indices
     [sorted_z, sorted_i] = sort(z);
+
+    % assign indices to each unique parcel as a cell array
     parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (max(z)+1)]))));
     
     % Formally we should construct a spanning tree within each cluster so

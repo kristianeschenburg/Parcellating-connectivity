@@ -20,15 +20,22 @@ p.addParameter('edge_prior',false,validationFcn);
 p.parse(varargin{:})
 edge_prior = p.Results.edge_prior;
 
+%%% Do not touch below here. %%%
+
 % Standard alpha = 10, kappa = 0.0001, nu = 1
 
-% Find highest-probability greedy parcellation to initialize
+% Find highest-probability greedy parcellation to initialize ddCRP
+% sizes can be a list [size_1,size_2...]
 logp = LogProbWC(D_norm, Z, sizes, alpha, kappa, nu, sigsq);
 [~,max_i] = max(logp);
 z = cluster(Z, 'maxclust', sizes(max_i));
 
 % Construct a spanning tree within each cluster as initialization for c
+% c is a vector, where each index c(i) is another index in 1:N, indicating
+% parent of vertex i
 c = ClusterSpanningTrees(z, adj_list);
+
+
 [map_z,stats] = ddCRP(D_norm, adj_list, c, gt_z, ...
                   pass_limit, alpha, kappa, nu, sigsq, ...
                   1000, verbose, 'edge_prior', edge_prior);

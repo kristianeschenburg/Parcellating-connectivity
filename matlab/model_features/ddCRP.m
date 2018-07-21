@@ -6,7 +6,7 @@
 %   be saved every stats_interval iterations, and will be printed to the console
 %   if verbose is True. The MAP parcellation and diagnostic information is
 %   returned.
-function [map_z,stats] = ddCRP(D, adj_list, init_c, gt_z, num_passes, ...
+function [map_z,stats] = ddCRP(features, adj_list, init_c, gt_z, num_passes, ...
                           alpha, kappa, nu, sigsq, stats_interval, ... 
                           verbose, varargin)
                       
@@ -28,7 +28,7 @@ nvox = length(adj_list);
 if (isempty(init_c))
     c = zeros(nvox, 1);
     for i = 1:nvox
-        neighbors = [adj_list{i} i];
+        neighbors = [adj_list{i}; i];
         c(i) = neighbors(randi(length(neighbors)));
     end
 else
@@ -36,12 +36,16 @@ else
 end
 
 % Initialize spatial connection matrix
+% G has ones at indices ( i,c(i) )
 G = sparse(1:nvox,c,1,nvox,nvox);
+
+% Compute the connected components of G
+% K = number of parcels
+% z = cluster ID for each vertex
+% parcels = index assignments to each cluster
 [K, z, parcels] = ConnectedComp(G);
 
-sym = CheckSymApprox(D);
-      
-curr_lp = FullProbabilityddCRP(D, c, parcels, alpha, hyp, sym);
+curr_lp = FullProbabilityddCRP_Data(hyp,parcels,features);
 
 
 stats = struct('times',[],'lp',[],'NMI',[],'K',[], ...
@@ -53,7 +57,9 @@ for pass = 1:num_passes
     % Visit elements randomly
     order = randperm(nvox);
     
+    % loop over randomized list of vertices
     for i = order
+
         if (curr_lp > max_lp)
             max_lp = curr_lp;
             map_z = z;
@@ -64,46 +70,67 @@ for pass = 1:num_passes
                                        map_z, verbose);
         end
         
-        %%% Compute change in log-prob when removing the edge c_i
+        %%% Compute change in log-prob when removing the edge c_i %%%
+
+        % remove index i's parent in sparse matrix G
         G(i,c(i)) = 0;
+
+        %%% %%% %%% %%% %%% CONFUSED ABOUT THIS PART %%% %%% %%% %%% %%%
+
+        % if the vertex pointed to itself
         if (c(i) == i)
             % Removing self-loop, parcellation won't change
             rem_delta_lp = -log(alpha);
             z_rem = z; parcels_rem = parcels;
+
+       	% if vertex points to a different parent than itself
         else
 
         	% compute connected components, and component IDs for each vertex (z_rem), due to proposal
+        	% (remember, G has the link from i-->c(i) removed)
+        	% K_rem = new number of clusters after parent removal
+        	% z_rem = new cluster assignment after parent removal
+        	% parcels_rem = new index groups after parent removal
             [K_rem, z_rem, parcels_rem] = ConnectedComp(G);
 
-            % if number of connected components changes with proposal
             % compute change in likelihood due to proposal
+            % removing the link might have split a cluster resulting in 2 new clusters
             if (K_rem ~= K)
                 % We split a cluster, compute change in likelihood
-                rem_delta_lp = -LikelihoodDiff(D, ...
-                                  parcels_rem, z_rem(i), z_rem(c(i)), hyp, sym);
+                rem_delta_lp = -LogProbDiff(hyp,parcels_rem,z_rem(i),z_rem(c(i)),features);
+
+            % otherwise, if we don't split a cluster
             else
                 rem_delta_lp = 0;
             end
         end
         
-        %%% Compute change in log-prob for each possible edge c_i
-        % get neighbors of vertex i
+        %%%%% Compute change in log-prob for each possible edge c_i %%%%%
+
+        % given the current state of the parcellation:
+        % K_rem, z_rem, parcels_rem (where rem = 'removed')
+        % compute change in likelihood for each neighbor of vertex of interest
+
+        % get neighbors of vertex i %%%
         adj_list_i = adj_list{i};
 
         % initialize log-probability vector of neighbors + 1 (for self)
         lp = zeros(length(adj_list_i)+1, 1);
 
-        % assign self choice as log(alpha)
+        % assign self choice a probability of log(alpha)
+        % here basically saying (choose to sit at table by itself)
+        % vertex doesn't "see" beyond it's set of neighbors, so 
+        % doesn't know if it's being pointed to
         lp(end) = log(alpha);
         cached_merge = zeros(length(adj_list_i),1);
 
         % loop over neighbors
-        for n_ind = 1:length(adj_list_i)
+        for n_ind = 1:length(adj_list_i) 
 
         	% get neighbor ID
             n = adj_list_i(n_ind);
 
-            % if component ID of neighbor is same as component ID of parent
+            % if component ID of neighbor is same as original parent before removal
             if (z_rem(n) == z_rem(c(i)))
                 % Just undoing edge removal
                 lp(n_ind) = -rem_delta_lp - (c(i)==i)*log(alpha);
@@ -117,21 +144,19 @@ for pass = 1:num_passes
                     lp(n_ind) = lp(prev_lp);
                 else
                     % This is a novel merge, compute change in likelihood
-                    lp(n_ind) = LikelihoodDiff(D, parcels_rem, z_rem(i), z_rem(n), hyp, sym);
+                    lp(n_ind) = LogProbDiff(hyp,parcels_rem,z_rem(i),z_rem(n),features);
                     cached_merge(n_ind) = z_rem(n);
                 end
             end
         end
-        
-        % if edge prior has been provided, apply prior probability weights
-        % to lp
-        if ismatrix(edge_prior)
-            fprintf('Index: %i\n',i);
-            adj_list_i = adj_list{i};
-            priors = edge_prior(i,adj_list_i);
-        end
-        
+
+        %%% %%% %%% %%% %%%
+
+        fprintf('Current LP: \n')
+        disp(lp)
+
         % Pick new edge proportional to probability
+        % ChooseFromLP selects random index with probability based on lp
         new_neighbor = ChooseFromLP(lp);
         if (new_neighbor <= length(adj_list_i))
             c(i) = adj_list_i(new_neighbor);
@@ -151,6 +176,7 @@ stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose);
 
 end
 
+
 % Given a sparse adjacency matrix G, returns the number of (undirected)
 %   connected components K, the component labels z, and a cell list of
 %   arrays with the indices of elements in each component
@@ -160,121 +186,6 @@ function [K, z, parcels] = ConnectedComp(G)
     parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (K+1)]))));
 end
 
-% Computes the change in model likelihood for connectivity matrix D when,
-%   starting with parcellation parcels_split (given as a list of arrays of
-%   element indices in each parcel), we combine parcels split_i1 and split_i2.
-%   The vectorized hyperparameters are specified in hyp, and the boolean
-%   input sym determines whether D is symmetric (in which case only half the
-%   connectivity values are considered).
-function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, hyp, sym)
-    
-    % Compute log-likelihood for split parcels
-    K = length(parcels_split);
-    s = zeros(K, K, 3);
-    for split_ind = [split_i1 split_i2]
-        
-        % Get all connections to split_ind parcel
-        for i = 1:K
-            samples = D(parcels_split{i}, parcels_split{split_ind});
-            if (sym && i == split_ind)
-                samples = samples(logical(triu(ones(size(samples)),1)));
-            else
-                samples = samples(:);
-            end
-            s(i,split_ind,:) = SufficientStats(samples);
-        end
-        
-        % If not symmetric, get all connections from split_ind parcel
-        if (~sym)
-            for i = 1:K
-                samples = D(parcels_split{split_ind}, parcels_split{i});
-                if (i == split_ind)
-                    off_diags = true(size(samples));
-                    off_diags(1:(size(samples,1)+1):end) = false;
-                    samples = samples(off_diags);
-                else
-                    samples = samples(:);
-                end
-                s(split_ind,i,:) = SufficientStats(samples);
-            end
-        end
-    end
-    
-    % Compute log-likelihood of all sufficient stats for split parcels
-    if (sym)
-        split_ll = LogLikelihood([...
-            reshape(s(:,split_i1,:),[],3); ...
-            reshape(s(1:K ~= split_i1, split_i2,:),[],3)], hyp);
-    else
-        split_ll = LogLikelihood([...
-            reshape(s(:, split_i1,:),[],3); ...
-            reshape(s(:, split_i2,:),[],3); ...
-            reshape(s(split_i1, (1:K ~= split_i1) & (1:K ~= split_i2),:),[],3); ...
-            reshape(s(split_i2, (1:K ~= split_i1) & (1:K ~= split_i2),:),[],3)], hyp);
-    end
-    
-    
-    % Compute log-likelihood for all merged parcels
-    m = zeros(2, K, 3);
-    
-    % Compute log-likelihood for all merged parcels
-    for dir = 1:2
-        if (dir == 2)
-            if (sym)
-                break;
-            else
-                s = permute(s, [2 1 3]);
-            end
-        end
-        
-        for i = 1:K
-            if (i ~= split_i1 && i ~= split_i2)
-                s_m = reshape(s(i, [split_i1 split_i2], :),2,3);
-                m(dir,i,:) = MergeSuffStats(s_m);
-                
-            end
-        end
-    end
-    if (sym)
-        % Compute central diagonal merge
-        m_central = MergeSuffStats(...
-            [MergeSuffStats(reshape(s(split_i1, [split_i1 split_i2], :),2,3)); ...
-            reshape(s(split_i2, split_i2, :),1,3)]);
-        % Compute log-likelihood of all sufficient stats for merged parcels
-        merge_ll = LogLikelihood([reshape(m(1, :, :),[],3); m_central], hyp);
-    else
-        % Compute central diagonal merge
-        m_central = MergeSuffStats(...
-            [MergeSuffStats(reshape(s(split_i1, [split_i1 split_i2], :),2,3)); ...
-             MergeSuffStats(reshape(s(split_i2, [split_i1 split_i2], :),2,3))]);
-        % Compute log-likelihood of all sufficient stats for merged parcels
-        merge_ll = LogLikelihood([reshape(m(1, :, :),[],3);
-                                reshape(m(2, :, :),[],3); m_central], hyp);
-    end
-    
-    ld = merge_ll - split_ll;
-end
-
-% Compute count, mean, and sum of squared deviations for vector of samples
-function suffstats = SufficientStats(samples)
-    suffstats = zeros(3,1);
-    if (isempty(samples))
-        return;
-    end
-    suffstats(1) = length(samples);
-    suffstats(2) = sum(samples)/suffstats(1);
-    suffstats(3) = sum((samples-suffstats(2)).^2);
-end
-
-% Compute sufficient statistics for merging two sets of suff stats, specified
-%   as a 2x3 matrix with columns = [count, mean, sum of squared dev]
-function m = MergeSuffStats(s_m)
-    m = zeros(1,3);
-    m(1) = s_m(1,1) + s_m(2,1);
-    m(2) = (s_m(1,1)*s_m(1,2) + s_m(2,1)*s_m(2,2))/m(1);
-    m(3) = s_m(1,3) + s_m(2,3) + ...
-                 (s_m(1,1)*s_m(2,1))/m(1) * (s_m(1,2) - s_m(2,2))^2;
-end
 
 % Update diagnostic stats with time (reported relative to start time t0),current
 %   log-probability, current number of clusters, current parcellation z, current

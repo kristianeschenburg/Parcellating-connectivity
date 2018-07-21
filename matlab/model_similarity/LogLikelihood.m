@@ -3,12 +3,17 @@
 %   hyperparameters
 function logp = LogLikelihood(stats, hyp)
 
+% consider only sufficient statistics for cross-similarity matrices 
+% with more than 1 sample
 stats = stats(stats(:,1)>1,:);
 
 % stats = [N | mu | sumsq]
 % hyp = [mu0 kappa0 nu0 sigsq0 nu0*sigsq0 const_logp_terms]
 
+% hyp(2) = kappa
 kappa = hyp(2) + stats(:,1);
+
+% hyp(3) = nu
 nu = hyp(3) + stats(:,1);
 %nu_sigsq = hyp(5) + sumSqX + (n*hyp(2)) / (hyp(2)+n) * (hyp(1) - meanX)^2;
 %Assume mu0=0 and kappa0 << n

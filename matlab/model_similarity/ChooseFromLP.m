@@ -10,4 +10,3 @@ p(~isfinite(p)) = 0;
 cumP = cumsum(p);
 i = find(cumP>rand,1);
 end
-
