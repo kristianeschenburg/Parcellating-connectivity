@@ -15,6 +15,17 @@
 function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ... 
     sizes, alpha, kappa, nu, sigsq, pass_limit, ...
     varargin)
+    
+    fprintf('%s',surfacefile);
+    fprintf('%s',labelfile);
+    fprintf('%s',datafile);
+    fprintf('%s',outputfile);
+    
+    disp(class(sizes))
+    disp(class(alpha))
+    disp(class(kappa))
+    disp(class(sigsq))
+    disp(class(pass_limit))
 
     addpath('./utilities/');
 
