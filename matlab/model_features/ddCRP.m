@@ -19,7 +19,7 @@ p.addParameter('edge_prior',false,validationFcn);
 p.parse(varargin{:})
 edge_prior = p.Results.edge_prior;
 
-hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
+hyp = [kappa,nu,sigsq];
 nvox = length(adj_list);
 
 % Generate random initialization if not specified
@@ -151,10 +151,8 @@ for pass = 1:num_passes
         end
 
         %%% %%% %%% %%% %%%
-
-        fprintf('Current LP: \n')
-        disp(lp)
-
+        lp = abs(lp);
+        
         % Pick new edge proportional to probability
         % ChooseFromLP selects random index with probability based on lp
         new_neighbor = ChooseFromLP(lp);
@@ -175,17 +173,6 @@ end
 stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose);
 
 end
-
-
-% Given a sparse adjacency matrix G, returns the number of (undirected)
-%   connected components K, the component labels z, and a cell list of
-%   arrays with the indices of elements in each component
-function [K, z, parcels] = ConnectedComp(G)
-    [K, z] = graphconncomp(G, 'Weak', true);
-    [sorted_z, sorted_i] = sort(z);
-    parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (K+1)]))));
-end
-
 
 % Update diagnostic stats with time (reported relative to start time t0),current
 %   log-probability, current number of clusters, current parcellation z, current

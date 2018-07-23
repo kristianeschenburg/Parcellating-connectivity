@@ -36,7 +36,7 @@ z = cluster(Z, 'maxclust', sizes(max_i));
 % parent of vertex i
 c = ClusterSpanningTrees(z, adj_list);
 
-[map_z,stats] = ddCRP(D_norm, adj_list, c, gt_z, ...
+[map_z,stats] = ddCRP(features, adj_list, c, gt_z, ...
                   pass_limit, alpha, kappa, nu, sigsq, ...
-                  1000, verbose, 'edge_prior', edge_prior);
+                  500, verbose, 'edge_prior', edge_prior);
 end

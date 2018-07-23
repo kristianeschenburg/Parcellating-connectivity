@@ -1,4 +1,3 @@
-addpath('/Users/kristianeschenburg/Documents/Code/Parcellating-connectivity/matlab/model_similarity/');
 addpath('/Users/kristianeschenburg/Documents/Code/Parcellating-connectivity/matlab/utilities/');
 addpath('/Users/kristianeschenburg/Documents/Code/Parcellating-connectivity/matlab/model_features/');
 %%
@@ -51,31 +50,13 @@ D_norm = normr(D);
 
 %%
 alpha = 0.1;
-kappa = 1;
-nu = 2;
-sigsq = 5;
+kappa = 200;
+nu = 1;
+sigsq = 200;
+
+sizes = [7];
 
 hyp = [kappa,nu,sigsq];
-%%
-
-data_ipl = data(regmap('L_inferiorparietal'),:);
-[n_ipl,~] = size(data_ipl);
-
-data_spg = data(regmap('L_supramarginal'),:);
-[n_spg,~] = size(data_spg);
-
-suff_ipl = suff_stats(data_ipl);
-suff_spg = suff_stats(data_spg);
-
-phyp_ipl = marginal_parameters(hyp,suff_ipl);
-phyp_spg = marginal_parameters(hyp,suff_spg);
-
-a = LogProbCluster(hyp,phyp_ipl,n_ipl) + LogProbCluster(hyp,phyp_spg,n_spg);
-b = LogProbDiff(hyp,parcel_split,1,2,data);
-c = log(alpha);
-
-lp = [a,b,c];
-
 
 %%
 
@@ -83,14 +64,5 @@ lp = [a,b,c];
 
 %%
 
-c = ClusterSpanningTrees(z, adj_list);
-
-hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
-nvox = length(adj_list);
-%%
-
-G = sparse(1:nvox,c,1,nvox,nvox);
-[K_rem, z_rem] = graphconncomp(G, 'Weak', true);
-[sorted_z, sorted_i] = sort(z);
-parcels_rem = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (K+1)]))));
-%%
+[map_z,stats] = InitializeAndRunddCRP(Z, D_norm, downsampled, adj_list, sizes, ...
+    alpha, kappa, nu, sigsq, 50, [], true);
