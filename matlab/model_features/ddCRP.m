@@ -1,12 +1,12 @@
 % Main function: Fits our model, given a connectivity matrix D and spatial
 %   adjacency specified by adj_list.  An initialization of the voxel links
 %   init_c and a ground truth parcellation gt_z (for comparison) can optionally
-%   be provided. MCMC will be run for num_passes over the dataset, with
+%   be provided. MCMC will be run for mcmc_passes over the dataset, with
 %   hyperparameters alpha, kappa, nu, and sigsq. Diagnostic information will
 %   be saved every stats_interval iterations, and will be printed to the console
 %   if verbose is True. The MAP parcellation and diagnostic information is
 %   returned.
-function [map_z,stats] = ddCRP(features, adj_list, init_c, gt_z, num_passes, ...
+function [map_z,stats] = ddCRP(features, adj_list, init_c, gt_z, mcmc_passes, ...
                           alpha, kappa, nu, sigsq, stats_interval, ... 
                           verbose, varargin)
                       
@@ -53,7 +53,7 @@ stats = struct('times',[],'lp',[],'NMI',[],'K',[], ...
 max_lp = -Inf;
 t0 = tic;
 steps = 0;
-for pass = 1:num_passes
+for pass = 1:mcmc_passes
     % Visit elements randomly
     order = randperm(nvox);
     

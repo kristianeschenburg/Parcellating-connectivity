@@ -9,7 +9,7 @@
 %   information about the iterations of the model. 
 
 function [map_z, stats] = InitializeAndRunddCRP(Z, D_norm, features, adj_list, sizes, alpha, kappa, ... 
-    nu, sigsq, pass_limit, gt_z, verbose, varargin)
+    nu, sigsq, mcmc_pass_limit, gt_z, verbose, varargin)
 
 % We add an optional parameter to receive the edge_prior matrix.
 p = inputParser;
@@ -37,6 +37,6 @@ z = cluster(Z, 'maxclust', sizes(max_i));
 c = ClusterSpanningTrees(z, adj_list);
 
 [map_z,stats] = ddCRP(features, adj_list, c, gt_z, ...
-                  pass_limit, alpha, kappa, nu, sigsq, ...
+                  mcmc_pass_limit, alpha, kappa, nu, sigsq, ...
                   500, verbose, 'edge_prior', edge_prior);
 end

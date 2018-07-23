@@ -31,9 +31,13 @@ function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ...
 
     % We add an optional parameter to receive the edge_prior matrix.
     p = inputParser;
-    errorMsg = 'Value must be numeric or boolean.'; 
-    validationFcn = @(x) assert(isnumeric(x) || islogical(x), errorMsg);
-    p.addParameter('edge_prior',false,validationFcn);
+    errorMsgEP = 'Value must be numeric or boolean.'; 
+    validationEP = @(x) assert(isnumeric(x) || islogical(x), errorMsgEP);
+    p.addParameter('edge_prior',false,validationEP);
+    
+    errorMsgSZ = 'Value must be numeric.';
+    validationSZ = @(x) assert(isnumeric(x),errorMsgSZ);
+    p.addParameter('sizes',true,validationSZ);
 
     p.parse(varargin{:})
     edge_prior = p.Results.edge_prior;
