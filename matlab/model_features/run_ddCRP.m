@@ -145,7 +145,7 @@ function run_ddCRP(surfacefile, labelfile, datafile, outputfile, ...
     data = normr(data);
     features = data(indices,:);
     
-    D = corr(downsampled');
+    D = corr(features');
     D = D - diag(diag(D));
     
     D_norm = normr(D);

@@ -2,7 +2,7 @@
 %   noise level "sig". Returns a dataset containing a connectivity
 %   matrix D, and adjacency list adj_list, ground truth parcellation z, and
 %   element coordinates coords
-function [D adj_list z coords] = GenerateSynthData(type, sig)
+function [D, adj_list, z, coords] = GenerateSynthData(type, sig)
 
 sqrtN = 18;
 
@@ -89,7 +89,6 @@ elseif (strcmp(type, 'face'))
      1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 ...
      1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2];
 end
-
 
 N = length(z);
 K = length(unique(z));

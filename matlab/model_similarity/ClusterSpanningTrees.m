@@ -20,14 +20,17 @@ function c = ClusterSpanningTrees(z, adj_list)
             next_edge = next_edge + neighbor_count(i);
         end
     end
-    G = sparse(node_list,cell2mat(adj_list),1,nvox,nvox);
-    %G = sparse(node_list, [adj_list{:}]', 1, nvox, nvox);
-    
+    %G = sparse(node_list,cell2mat(adj_list),1,nvox,nvox);
+    G = sparse(node_list, [adj_list{:}]', 1, nvox, nvox);
+
     % Construct spanning tree in each cluster
     c = zeros(length(adj_list),1);
-    for clust = unique(z)';
+    for clust = unique(z)'
         clust_vox = find(z==clust);
-        [~,parents] = graphminspantree(G,clust_vox(randi(length(clust_vox),1)));
+        %[~,parents] = graphminspantree(G,clust_vox(randi(length(clust_vox),1)));
+        root = clust_vox(randi(length(clust_vox),1));
+        fprintf('Root node: %i\n',root);
+        [~,parents] = graphminspantree(G,root);
         c(clust_vox) = parents(clust_vox);
     end
     roots = find(c==0);

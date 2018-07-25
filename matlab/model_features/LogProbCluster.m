@@ -22,7 +22,7 @@ inner = (1/2) * (log(kappa_0) + nu_0*log(nu_0*sigma_0) ...
 		- log(kappa_n) - nu_n*log(nu_n) - n*log(pi));
 
 % compute sum of sigma_n for each feature
-outer = sum(1./sigma_n);
+outer = sum(log(1./sigma_n));
 
 lp = p*(gam + inner) + outer;
 
