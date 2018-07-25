@@ -1,4 +1,4 @@
-function [parcels,mus,sigmas,features] = sample_synthetic(z,d,mu_0,kappa_0,nu_0,sigma_0)
+function [parcels,mus,sigmas,features,data] = sample_synthetic(z,d,mu_0,kappa_0,nu_0,sigma_0)
 
 labels = unique(z);
 parcels = cell(length(labels),1);
@@ -8,7 +8,7 @@ sigmas = cell(length(labels),1);
 features = cell(length(labels),1);
 
 for l = labels
-    parcels{l,1} = find(z == l);
+    parcels{l} = find(z == l);
     
     [mu,sigma] = sample_priors(mu_0,kappa_0,nu_0,sigma_0,d);
     
@@ -19,6 +19,12 @@ for l = labels
     samples = normc(samples);
     features{l} = samples;
     
+end
+
+data = zeros(length([parcels{:}]),d);
+
+for l = labels
+    data(parcels{l},:) = features{l};
 end
 
 end

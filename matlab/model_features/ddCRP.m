@@ -57,6 +57,9 @@ for pass = 1:mcmc_passes
     % Visit elements randomly
     order = randperm(nvox);
     
+    fprintf('Current lp: %.3f\n',curr_lp);
+    fprintf('Current max_lp: %.3f\n',max_lp);
+    
     % loop over randomized list of vertices
     for i = order
 
@@ -150,9 +153,6 @@ for pass = 1:mcmc_passes
             end
         end
 
-        %%% %%% %%% %%% %%%
-        lp = abs(lp);
-        
         % Pick new edge proportional to probability
         % ChooseFromLP selects random index with probability based on lp
         new_neighbor = ChooseFromLP(lp);
