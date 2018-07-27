@@ -1,6 +1,4 @@
 import numpy as np
-import networkx as nx
-
 from scipy import sparse
 
 
@@ -18,8 +16,9 @@ def ConnectedComponents(G):
 
     sorted_i = np.argsort(components)
     sorted_z = components[sorted_i]
+
     parcels = np.split(sorted_i,np.flatnonzero(np.diff(sorted_z))+1)
-    parcels = dict(zip(list(set(sorted_z)),parcels))
+    parcels = dict(zip(list(set(sorted_z)),map(list,parcels)))
     
     return [K,components,parcels]
 
@@ -98,8 +97,9 @@ class ClusterSpanningTrees(object):
         minT = sparse.csgraph.minimum_spanning_tree(G)
         c = np.zeros(len(self.adj_list))
         for clust in np.unique(self.z):
+
             clust_vox = np.flatnonzero(self.z==clust)
-            rand_root = clust_vox[random.randint(1,len(clust_vox)-1)]
+            rand_root = clust_vox[np.random.randint(low=0,high=len(clust_vox)-1,size=1)]
             _,parents = sparse.csgraph.breadth_first_order(minT,rand_root,
                                                             directed=False) 
             c[clust_vox] = parents[clust_vox] 
