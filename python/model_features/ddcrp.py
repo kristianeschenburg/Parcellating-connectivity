@@ -110,7 +110,7 @@ class ddCRP(object):
 
                 if steps % self.stats_interval == 0:
                     stats = statistics.UpdateStats(stats, t0, curr_lp, max_lp,
-                                    K, list(z), list(c), steps, gt_z, map_z, self.verbose);
+                                    K, list(z), list(c), steps, gt_z, map_z, self.verbose)
 
                 # remove current link to parent
                 G[i,c[i]] = 0
@@ -156,11 +156,11 @@ class ddCRP(object):
 
                 curr_lp = curr_lp + rem_delta_lp + lp[new_neighbor]
                 G[i,c[i]] = 1
-                [K,z,parcels] = ConnectedComponents(G);
+                [K,z,parcels] = ConnectedComponents(G)
                 steps += 1
 
         stats = statistics.UpdateStats(stats, t0, curr_lp, max_lp,
-                    K, list(z), list(c), steps, gt_z, map_z, self.verbose);
+                    K, list(z), list(c), steps, gt_z, map_z, self.verbose)
 
         self.map_z = map_z
         self.stats = stats
@@ -210,16 +210,16 @@ class ddCRP(object):
         p = len(sigma)
         
         # ratio of gamma functions
-        gam = gammaln(nu/2) - gammaln(self.nu0/2);
+        gam = gammaln(nu/2) - gammaln(self.nu0/2)
         
         # terms with square roots in likelihood function
         inner = (1./2) * (np.log(self.kappa0) + self.nu0*np.log(self.nu0*self.sigma0) - 
-                         np.log(kappa) - nu*np.log(nu) - n*np.log(np.pi));
+                         np.log(kappa) - nu*np.log(nu) - n*np.log(np.pi))
         
         # sum of sigma_n for each feature
         outer = (-nu/2.)*np.log(sigma).sum()
         
-        lp = p*(gam + inner) + outer;
+        lp = p*(gam + inner) + outer
         
         return lp
 
@@ -243,16 +243,16 @@ class ddCRP(object):
             parcel_split[split_l2]])
 
         # compute sufficient statistics and marginalized parameters of merged parcels
-        stats = self._sufficient_statistics(features[merged_indices,:]);
-        phyp = self._marginal_parameters(stats);
+        stats = self._sufficient_statistics(features[merged_indices,:])
+        phyp = self._marginal_parameters(stats)
 
         # compute likelihood of merged parcels
-        merge_ll = self._LikelihoodCluster(phyp,stats[0]);
+        merge_ll = self._LikelihoodCluster(phyp,stats[0])
 
         # compute likelihood of split parcels
-        split_ll = self._LogProbSplit(parcel_split,split_l1,split_l2,features);
+        split_ll = self._LogProbSplit(parcel_split,split_l1,split_l2,features)
 
-        ld = merge_ll - split_ll;
+        ld = merge_ll - split_ll
 
         return ld
 
@@ -274,16 +274,16 @@ class ddCRP(object):
         idx1 = parcel_split[split_l1]
         idx2 = parcel_split[split_l2]
 
-        suff1 = self._sufficient_statistics(features[idx1,:]);
-        suff2 = self._sufficient_statistics(features[idx2,:]);
+        suff1 = self._sufficient_statistics(features[idx1,:])
+        suff2 = self._sufficient_statistics(features[idx2,:])
 
-        phyp1 = self._marginal_parameters(suff1);
-        phyp2 = self._marginal_parameters(suff2);
+        phyp1 = self._marginal_parameters(suff1)
+        phyp2 = self._marginal_parameters(suff2)
 
         lp_1 = self._LikelihoodCluster(phyp1,suff1[0])
         lp_2 = self._LikelihoodCluster(phyp2,suff2[0])
 
-        split_ll = lp_1 + lp_2;
+        split_ll = lp_1 + lp_2
 
         return split_ll
  
@@ -333,8 +333,8 @@ class ddCRP(object):
         kappaN = self.kappa0 + n
         nuN = self.nu0 + n
         
-        deviation = ((n*self.kappa0) / (n+self.kappa0)) * ((self.mu0 - mu)**2);
-        sigmaN = (1./nuN) * (self.nu0*self.sigma0 + ssq + deviation);
+        deviation = ((n*self.kappa0) / (n+self.kappa0)) * ((self.mu0 - mu)**2)
+        sigmaN = (1./nuN) * (self.nu0*self.sigma0 + ssq + deviation)
         
         return [kappaN,nuN,sigmaN]
     
