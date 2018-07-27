@@ -8,7 +8,7 @@
 %   Returns the MAP parcellation map_z, as well as a stats objects with
 %   information about the iterations of the model.
 
-function [map_z, stats] = InitializeAndRunddCRP(Z, D_norm, adj_list, sizes, alpha, kappa, ... 
+function [map_z, stats,initial_parc] = InitializeAndRunddCRP(Z, D_norm, adj_list, sizes, alpha, kappa, ... 
     nu, sigsq, pass_limit, gt_z, verbose, varargin)
 
 % We add an optional parameter to receive the edge_prior matrix.
@@ -36,7 +36,7 @@ z = cluster(Z, 'maxclust', sizes(max_i));
 c = ClusterSpanningTrees(z, adj_list);
 
 
-[map_z,stats] = ddCRP(D_norm, adj_list, c, gt_z, ...
+[map_z,stats,initial_parc] = ddCRP(D_norm, adj_list, [], gt_z, ...
                   pass_limit, alpha, kappa, nu, sigsq, ...
-                  1000, verbose, 'edge_prior', edge_prior);
+                  5, verbose, 'edge_prior', edge_prior);
 end

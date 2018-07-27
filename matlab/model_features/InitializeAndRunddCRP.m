@@ -38,5 +38,5 @@ c = ClusterSpanningTrees(z, adj_list);
 
 [map_z,stats] = ddCRP(features, adj_list, c, gt_z, ...
                   mcmc_pass_limit, alpha, kappa, nu, sigsq, ...
-                  500, verbose, 'edge_prior', edge_prior);
+                  150, verbose, 'edge_prior', edge_prior);
 end

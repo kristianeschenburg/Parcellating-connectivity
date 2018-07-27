@@ -6,7 +6,7 @@
 %   be saved every stats_interval iterations, and will be printed to the console
 %   if verbose is True. The MAP parcellation and diagnostic information is
 %   returned.
-function [map_z,stats] = ddCRP(D, adj_list, init_c, gt_z, num_passes, ...
+function [map_z,stats,initial_parc] = ddCRP(D, adj_list, init_c, gt_z, num_passes, ...
                           alpha, kappa, nu, sigsq, stats_interval, ... 
                           verbose, varargin)
                       
@@ -28,7 +28,7 @@ nvox = length(adj_list);
 if (isempty(init_c))
     c = zeros(nvox, 1);
     for i = 1:nvox
-        neighbors = [adj_list{i}; i];
+        neighbors = [adj_list{i} i];
         c(i) = neighbors(randi(length(neighbors)));
     end
 else
@@ -45,6 +45,8 @@ G = sparse(1:nvox,c,1,nvox,nvox);
 % parcels = index assignments to each cluster
 [K, z, parcels] = ConnectedComp(G);
 
+initial_parc = z;
+
 % check if input data matrix is symmetric, return boolean
 sym = CheckSymApprox(D);
       
@@ -53,7 +55,9 @@ curr_lp = FullProbabilityddCRP(D, c, parcels, alpha, hyp, sym);
 
 
 stats = struct('times',[],'lp',[],'NMI',[],'K',[], ...
-                'z', zeros(0,nvox), 'c', zeros(0,nvox));
+                'z', zeros(0,nvox), 'c', zeros(0,nvox), ...
+                'max_lp',[],'SLP',[]);
+            
 max_lp = -Inf;
 t0 = tic;
 steps = 0;
@@ -71,7 +75,7 @@ for pass = 1:num_passes
         
         if (mod(steps, stats_interval) == 0)
             stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, ...
-                                       map_z, verbose);
+                                       map_z, max_lp, verbose);
         end
         
         %%% Compute change in log-prob when removing the edge c_i %%%
@@ -161,9 +165,6 @@ for pass = 1:num_passes
 
         %%% %%% %%% %%% %%%
 
-        fprintf('Current LP: \n')
-        disp(lp)
-        
         % if edge prior has been provided, apply prior probability weights
         % to lp
         % if ismatrix(edge_prior)
@@ -189,7 +190,7 @@ for pass = 1:num_passes
     end
 end
 
-stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose);
+stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, max_lp, verbose);
 
 end
 
@@ -330,28 +331,33 @@ end
 %   log-probability, current number of clusters, current parcellation z, current
 %   voxel links c, number of steps, ground truth (if available), best
 %   parcellation so far (map_z). If verbose=True, also print to console.
-function stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose)
+function stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, max_lp, verbose)
+    stats.max_lp = [stats.max_lp max_lp];
     stats.lp = [stats.lp curr_lp];
     stats.K = [stats.K K];
     stats.z = [stats.z; z];
     elapsed = toc(t0);
     stats.times = [stats.times elapsed];
     stats.c = [stats.c; c'];
+    
     if (~isempty(gt_z))
         stats.NMI = [stats.NMI CalcNMI(gt_z, map_z)];
     end
+    
     if (verbose)
         if (~isempty(gt_z))
             disp(['Step: ' num2str(steps) ...
               '  Time: ' num2str(elapsed) ...
               '  LP: ' num2str(curr_lp) ...
               '  K: ' num2str(K) ...
-              ' NMI: ' num2str(stats.NMI(end))]);
+              ' NMI: ' num2str(stats.NMI(end)) ...
+              ' MAX_LP: ' num2str(stats.max_lp(end))]);
         else
             disp(['Step: ' num2str(steps) ...
                   '  Time: ' num2str(elapsed) ...
                   '  LP: ' num2str(curr_lp) ...
-                  '  K: ' num2str(K)]);
+                  '  K: ' num2str(K) ...
+                  '  MAX_LP: ' num2str(stats.max_lp(end))]);
         end
     end
 end

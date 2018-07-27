@@ -10,10 +10,10 @@ features = cell(length(labels),1);
 for l = labels
     parcels{l} = find(z == l);
     
-    [mu,sigma] = sample_priors(mu_0,kappa_0,nu_0,sigma_0,d);
+    [mu_p,sigma_p] = sample_priors(mu_0,kappa_0,nu_0,sigma_0,d);
     
-    sigmas{l} = sigma;
-    mus{l} = mu;
+    sigmas{l} = sigma_p;
+    mus{l} = mu_p;
     
     samples = mvnrnd(mus{l},diag(sigmas{l}),length(parcels{l}));
     samples = normc(samples);
@@ -21,18 +21,21 @@ for l = labels
     
 end
 
-data = zeros(length([parcels{:}]),d);
+disp(size(parcels))
+disp(size(features))
 
-for l = labels
-    data(parcels{l},:) = features{l};
+data = zeros(length(z),d);
+
+for p = 1:length(parcels)
+    data(parcels{p},:) = features{p};
 end
 
 end
 
-function [mu,sigma] = sample_priors(mu_0,kappa_0,nu_0,sigma_0,size)
+function [mu,sigma_p] = sample_priors(mu_0,kappa_0,nu_0,sigma_0,size)
 
 x = chi2rnd(nu_0,[size,1]);
-sigma = (nu_0*sigma_0)./x;
-mu = normrnd(mu_0,sigma./kappa_0);
+sigma_p = (nu_0*sigma_0)./x;
+mu = normrnd(mu_0,sigma_p./kappa_0);
 
 end

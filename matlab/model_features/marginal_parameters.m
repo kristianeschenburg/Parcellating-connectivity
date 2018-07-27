@@ -22,7 +22,7 @@ nu_n = hyp(2) + n;
 % here we assume that mu_0 is 0
 % deviation = ((n*hyp(2))/(n+hyp(2))) * (hyp(1)-mu);
 
-deviation = (n*hyp(1) / (n+hyp(1))) * (-mu);
+deviation = (n*hyp(1) / (n+hyp(1))) * (-mu).^2;
 sigma_n = (1/nu_n) * (hyp(2)*hyp(3) + ssq + deviation);
 
 % return parameters updated with data
