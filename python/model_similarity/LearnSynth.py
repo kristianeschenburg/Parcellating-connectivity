@@ -1,67 +1,8 @@
 import numpy as np
-import collections
-import WardClustering
-import StatsUtil
-import InitializeAndRunddCRP as initdd
-from multiprocessing import Pool
+from scipy import stats
 
 # Format of generated synthetic datasets
 SynthData = collections.namedtuple('SynthData',['D','adj_list','z','coords'])
-
-# Main function: Computes a parcellation of synthetic data at different noise
-#   levels, using Ward Clustering and our method based on the ddCRP. Each
-#   parcellation is evaluated based on its Normalized Mututal Information
-#   with the ground truth. The input "type"={'square','stripes','face'}
-#   determines the underlying ground truth parcellation.
-def LearnSynth(type):
-    np.random.seed(1)   # For repeatability
-    max_noise = 10;     # Number of noise levels to try
-    repeats = 20;       # Number of times to repeat experiments
-    
-    WC = np.zeros((max_noise,repeats))
-    DC = np.zeros((max_noise,repeats))
-    DC_K = np.zeros((max_noise,repeats))
-
-    for rep in range(repeats):
-        print('Repeat #' + str(rep))
-        all_synth = [GenerateSynthData(type, noise_sig) 
-                        for noise_sig in range(max_noise)]
-
-        # Run all noise levels in parallel
-        p = Pool(processes=max_noise)
-        all_res = p.map(LearnSynthForDataset, all_synth)
-        p.close()
-        p.join()
-        WC[:,rep] = [res[0] for res in all_res]
-        DC[:,rep] = [res[1] for res in all_res]
-        DC_K[:,rep] = [res[2] for res in all_res]
-
-    return (WC, DC, DC_K)
-
-
-# Compute Ward clustering and our parcellation for a specific synthetic
-#   (previously generated) dataset
-def LearnSynthForDataset(synth):
-    # Hyperparameters
-    alpha = 10;
-    kappa = 0.0001;
-    nu = 1;
-    sigsq = 0.01;
-    pass_limit = 30;
-
-    D = NormalizeConn(synth.D)  # Normalize connectivity to zero mean, unit var
-
-    # Compute our ddCRP-based parcellation
-    Z = WardClustering.ClusterTree(D, synth.adj_list)
-    _,dd_stats = initdd.InitializeAndRun(Z, D, synth.adj_list, range(1,21),
-                    alpha, kappa, nu, sigsq, pass_limit, synth.z, 0)
-    DC = dd_stats['NMI'][-1]
-    DC_K = dd_stats['K'][-1]
-
-    # Ward Clustering, using number of clusters discovered from our method
-    WC = StatsUtil.NMI(synth.z, WardClustering.Cluster(Z, DC_K))
-
-    return (WC,DC,DC_K)
 
 # Generate synthetic dataset of "type"={'square','stripes','face'} at a given
 #   noise level "sig". Returns a SynthData object containing a connectivity
@@ -85,7 +26,7 @@ def GenerateSynthData(type, sig):
                 curr_adj.append((c-1) + r*sqrtN)
             if c < (sqrtN-1):
                 curr_adj.append((c+1) + r*sqrtN)
-            adj_list[currVox] = np.array(curr_adj)
+            adj_list[currVox] = list(np.array(curr_adj))
     
     if type == 'square':
         z = np.array([
@@ -182,21 +123,68 @@ def GenerateSynthData(type, sig):
     synth = SynthData(D, adj_list, z, coords)
     return synth
 
+def synthetic_features(z,d,mu_0,kappa_0,nu_0,sigma_0):
 
-# Normalize connectivity matrix "D" to have zero mean and unit variance
-def NormalizeConn(D):
-    D = D.astype('float64')
-    N = D.shape[0]
-    off_diags = np.logical_not(np.eye(N,dtype='bool'))
-    D = D - D[off_diags].mean()
-    D = D/D[off_diags].std()
-    np.fill_diagonal(D, 0)
+	"""
+	Sample synthetic features for a given parcellation.def
 
-    D = D.astype('float32')
-    return D
+	Parameters:
+	- - - - -
+		z : parcellation
+		d : feature dimensions
+		mu_0, kappa_0 : hyperparameters on prior mean
+		nu_0, sigma_0 : hyperparameters on prior variance
+	"""
 
-# If this file is run at the command line, perform a demo
-if __name__ == "__main__":
-    WC,DC,DC_K = LearnSynth('stripes');
-    print('WC: ' + str(np.mean(WC,axis=1)))
-    print('DC: ' + str(np.mean(DC,axis=1)))
+	parcels = {k : np.where(z == k)[0] for k in set(z)}
+	params = {k: {'mu': None, 'std': None} for k in set(z)}
+
+	parcel_features = {}.fromkeys(parcels.keys())
+
+	for parc,idx in parcels.items():
+
+		m,s = sample_priors(mu_0,kappa_0,nu_0,sigma_0,d)
+		params[parc]['mu'] = m
+		params[parc]['std'] = s
+
+		parcel_features[parc] = sample_features(m,s,len(parcels[parc]))
+
+	feature_array = np.zeros((len(z),d))
+	for parc,idx in parcels.items():
+		feature_array[idx,:] = parcel_features[parc]
+
+
+	return [parcels,params,parcel_features,feature_array]
+
+def sample_priors(mu_0,kappa_0,nu_0,sigma_0,size):
+
+	"""
+	Sample prior mean and variance of synthetic data.
+
+	Parameters:
+	- - - - -
+		mu_0, kappa_0 : hyperparameters on prior mean
+		nu_0, sigma_0 : hyperparameters on prior variance
+	"""
+
+	x = stats.chi2.rvs(nu_0,size=[size,])
+	sigma_p = (nu_0*sigma_0)/x;
+	mu_p = stats.norm.rvs(mu_0,(sigma_p/kappa_0))
+
+	return [mu_p,sigma_p]
+
+def sample_features(mu,sigma,d):
+
+	"""
+	Sample from the prior distribution.
+
+	Parameters:
+	- - - - -
+		mu : prior mean
+		sigma : priovar (co)variance
+		d : number of samples
+	"""
+
+	samples = stats.multivariate_normal.rvs(mean=mu,cov=np.diag(sigma),size=[d,])
+
+	return samples
